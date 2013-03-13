@@ -7,56 +7,178 @@
 
 DHT dht22;
 
-//Количество отсчетов таймера для подавления
-//дребезга кнопки, 10*50000=0,5 с
-int debouncePause = 0;
+const unsigned kStrBufSz = 32;
+char strbuf[kStrBufSz];
+
+// debouncing counter
+int debounce_cnt = 0;
+
+void initPins ();
+void initUART ();
+void initClocks ();
+
 void sendString(char*);
 
 int main(void) {
     WDTCTL = WDTPW + WDTHOLD;
 
-    //Красный светодиод подключен к выводу P1.0
-    //Используем для индикации процесса получения данных
-    //Настраиваем P1.0 как выход и подаем на него низкий уровень
+    initPins ();
+    initUART ();
+    initClocks ();
+
+    uint16_t hint, hdec, tint, tdec;
+
+    while (true) {
+        __bis_SR_register(CPUOFF + GIE);
+
+        int dht22_status = dht22.decode();
+
+        sprintf (strbuf, "=> [%d] ", dht22_status);
+        sendString (strbuf);
+
+        dht22.humidity(&hint, &hdec);
+        dht22.temperature(&tint, &tdec);
+
+        sprintf (strbuf, "H:%d,%d%%, T:%d,%dC\r\n", hint, hdec, tint, tdec);
+        sendString (strbuf);
+
+        // disable red LED
+        P1OUT &= ~BIT0;
+
+        // reset debounce pause
+        debounce_cnt = 0;
+
+        P1IFG |= BIT3;
+        P1IE |= BIT3;
+    }
+}
+
+// Timer0 A0 interrupt handler
+#pragma vector=TIMER0_A0_VECTOR
+__interrupt void Timer0_A0(void) {
+    // 60 x 50000 = 3s
+
+    if (debounce_cnt == 59) {
+        // Clear timer
+        TA0CTL = TACLR;
+
+        // Set sensor pin as output and put it LOW.
+        P2DIR |= BIT5;
+        P2OUT &= ~BIT5;
+
+        // 20ms UP timer start (sensor handshake)
+        TA0CCR0 = 20000;
+        TA0CTL = TASSEL_2 + MC_1;
+    }
+
+    // After 20 ms handshake
+    if (debounce_cnt == 60) {
+        // Clear A0 timer, disable this interruption
+        TA0CTL = TACLR;
+        TA0CCTL0 &= ~CCIE;
+
+        // Set P2.5 as input, enable interruption
+        P2DIR &= ~BIT5;
+        P2IFG &= ~BIT5;
+        P2IES |= BIT5;
+        P2IE |= BIT5;
+
+        // Continuous A1 start for sensor answer or timeout
+        TA0CTL = TASSEL_2 + MC_2 + TAIE;
+    }
+
+    debounce_cnt++;
+}
+
+// Timer0 A1 interrupt handler
+#pragma vector=TIMER0_A1_VECTOR
+__interrupt void Timer0_A1(void) {
+    // Overflow flag checking
+    switch (TA0IV) {
+		case TA0IV_TAIFG:
+			// Disable interruption P2.5
+			// Clear timer, enable CPU for UART report
+			P2IE &= ~BIT5;
+			TA0CTL = TACLR;
+
+		    TA0CCR0 = 50000;
+		    TA0CCTL0 |= CCIE;
+		    TA0CTL = TASSEL_2 + MC_1;
+
+			__bic_SR_register_on_exit (CPUOFF);
+			break;
+		default:
+			break;
+    }
+
+}
+
+// Button P1.3 interrupt handler
+#pragma vector=PORT1_VECTOR
+__interrupt void Port_1 (void) {
+		// disable interruption and clear flag
+		P1IFG &= ~BIT3;
+		P1IE &= ~BIT3;
+
+		// disable LEDs
+		P1OUT &= ~BIT0;
+		P1OUT &= ~BIT6;
+
+		// Start timer for UP mode and allow interruption #0
+		// limited by 50000
+		TA0CCR0 = 50000;
+		TA0CCTL0 |= CCIE;
+		TA0CTL = TASSEL_2 + MC_1;
+}
+
+// DHT sensor interrupt handler
+#pragma vector=PORT2_VECTOR
+__interrupt void Port_2 (void) {
+    // Clear interruption flag
+    P2IFG &= ~BIT5;
+    // Copy duration to dht22 object
+    dht22.handle_timer(TA0R);
+    // Clear and restart timer
+    TA0CTL = TACLR;
+    TA0CTL = TASSEL_2 + MC_2 + TAIE;
+    // Blink red LED
+    P1OUT ^= BIT0;
+}
+
+void initPins () {
+    // Light off for activity RED led
     P1DIR |= BIT0;
     P1OUT &= ~BIT0;
-    //Зеленый светодиод подключен к выводу P1.6
-    //Используем для индикации готовности устройства выполнить
-    //попытку получить данные с датчика
-    //Настраиваем P1.6 как выход и подаем на него высокий уровень
+
+    // Light on for ready GREEN led
     P1DIR |= BIT6;
     P1OUT |= BIT6;
-    //Кнопка подключена к выводу P1.3
-    //Используем ее для иницирования получения данных от датчика
-    //Настраиваем P1.3 как вход, включаем подтягивающий
-    //к высокому уровню резистор, очищаем флаг прерывания и
-    //разрешаем прерывание для P1.3 при изменении сигнала на входе
-    //с 1 на 0
+
+    // Enable P1.3 button as measurements trigger
     P1DIR &= ~BIT3;
     P1OUT |= BIT3;
     P1REN |= BIT3;
     P1IFG &= ~BIT3;
     P1IES |= BIT3;
     P1IE |= BIT3;
-    //Вывод P1.2 используется для передачи данных по UART
-    //Настроим его для выполнения этой функции
+
+    // Enable P1.2 as UART
     P1SEL |= BIT2;
     P1SEL2 |= BIT2;
+}
 
-    //Настройка UART
-    //Предварительно сделал настройки с помощью GRACE в
-    //тестовом проекте,т.к. пока не разобрался с регистрами
-    //и флагами этой периферии
-    //Baund 9600
+void initUART () {
+    // UART init code from GRACE
+    // BR 9600
     UCA0CTL1 |= UCSSEL_2;
     UCA0BR0 = 104;
     UCA0BR1 = 0;
     UCA0MCTL = UCBRS0;
     UCA0CTL1 &= ~UCSWRST;
+}
 
-    //Настройка источников тактовых импульсов
-    //Также настроил в Grace на 1МГц, т.к. пока еще
-    // не совсем понимаю смысл некоторых флагов
+void initClocks () {
+    // Clocks settings for Calibrated 1MHz
     BCSCTL2 = SELM_0 + DIVM_0 + DIVS_0;
     if (CALBC1_1MHZ != 0xFF) {
         DCOCTL = 0x00;
@@ -65,139 +187,13 @@ int main(void) {
     }
     BCSCTL1 |= XT2OFF + DIVA_0;
     BCSCTL3 = XT2S_0 + LFXT1S_2 + XCAP_1;
-
-    //Запускаем бесконечный цикл программы
-    while (1) {
-        __bis_SR_register(CPUOFF + GIE);
-
-        char buf[30]; //Буфер для символов
-        memset(buf, 0, 30); //Заполняем его 0
-        //Цикл для преобразования временного интервала захваченных
-        //импульсов в биты данных
-
-        int d = dht22.decode();
-
-        sprintf(buf, "[%d]", d);
-        sendString(buf);
-
-        uint16_t hint, hdec, tint, tdec;
-
-        dht22.humidity(&hint, &hdec);
-        dht22.temperature(&tint, &tdec);
-
-        memset(buf, 0, 30);
-        sprintf (buf, "H:%d,%d, T:%d,%dC", hint, hdec, tint, tdec);
-        sendString (buf);
-        memset (buf, 0, 30);
-
-        //Включаем зеленый светодиод,
-        //устройство готово считывать температуру снова
-        P1OUT |= BIT6;
-        //Выключаем красный светодиод,
-        //получение данных завершено
-        P1OUT &= ~BIT0;
-        //Очищаем флаг прерывания и разрешаем прерывание для ножки P1.3, к которой подключена
-        //кнопка
-        P1IFG &= ~BIT3;
-        P1IE |= BIT3;
-
-        debouncePause = 0;
-    }
-
-}
-//Процедура обработки прерывания №0 таймера
-#pragma vector=TIMER0_A0_VECTOR
-__interrupt void Timer0_A0(void) {
-    //Если прошло 10*50000=0,5 с
-
-    if (debouncePause == 9) {
-        //Очищаем таймер
-        TA0CTL = TACLR;
-        //Настраиваем ножку P2.5 как выход
-        //и подаем на нее низкий уровень
-        P2DIR |= BIT5;
-        P2OUT &= ~BIT5;
-        //Очищаем таймер, и перезапускаем в режиме UP на 20 мс, чтобы дать понять датчику,
-        //что нам нужны данные
-        TA0CCR0 = 20000;
-        TA0CTL = TASSEL_2 + MC_1;
-    }
-    //Через 20 мс попадаем в эту ветку
-    if (debouncePause == 10) {
-        //Очищаем таймер,
-        //запрещаем прерывание №0 таймера,
-        TA0CTL = TACLR;
-        TA0CCTL0 &= ~CCIE;
-        //Настраиваем P2.5 как
-        //вход, очищаем флаг прерывания, разрещаем прерывания,
-        P2DIR &= ~BIT5;
-        P2IFG &= ~BIT5;
-        P2IES |= BIT5;
-        P2IE |= BIT5;
-        //Перезапускаем таймер в режиме Continuous и разрешаем
-        //прерывание №1, которое сработает при переполнении счетчика -
-        //это будет сигналом, что данные получены или датчик не отвечает
-        TA0CTL = TASSEL_2 + MC_2 + TAIE;
-    }
-    debouncePause++;
-
-}
-//Процедура обработки прерывания №1 таймера
-#pragma vector=TIMER0_A1_VECTOR
-__interrupt void Timer0_A1(void) {
-    //По флагу переполнения таймера
-    switch (TA0IV) {
-    case TA0IV_TAIFG:
-        //Запрещаем прерывания
-        //для ножки P2.5 , очищаем таймер и включаем ЦПУ,
-        //чтобы выполнить обработку полученных данных и
-        //перадать их по UART
-        P2IE &= ~BIT5;
-        TA0CTL = TACLR;
-        __bic_SR_register_on_exit(CPUOFF);
-        break;
-    default:
-        break;
-    }
-
-}
-//Процедура обработки прерывании кнопки, ножка P1.3
-#pragma vector=PORT1_VECTOR
-__interrupt void Port_1(void) {
-    //Очищаем флаг прерывания и запрещаем прерывания для кнопки,
-    //чтобы избежать дребезга
-    P1IFG &= ~BIT3;
-    P1IE &= ~BIT3;
-    //Отключаем диоды
-    P1OUT &= ~BIT0;
-    P1OUT &= ~BIT6;
-    //Запускаем таймер в режиме UP и разрешаем прерывание №0
-    //оно срабатывает при достяжении значения 50000
-    // и отсчет начивается заново
-    TA0CCR0 = 50000;
-    TA0CCTL0 |= CCIE;
-    TA0CTL = TASSEL_2 + MC_1;
-
-}
-//Процедура обработки прерывании линии данных датчика, ножка P2.5
-#pragma vector=PORT2_VECTOR
-__interrupt void Port_2(void) {
-    //Очищаем флаг прерывания
-    P2IFG &= ~BIT5;
-    //Копируем значение таймера в массив
-    dht22.handle_timer(TA0R);
-    //Очищаем и перезапускаем таймер
-    TA0CTL = TACLR;
-    TA0CTL = TASSEL_2 + MC_2 + TAIE;
-    //Моргаем красным диодом
-    P1OUT ^= BIT0;
 }
 
 void sendString(char * text) {
-    int i = 0;
-    for (i = 0; i < strlen(text); i++) {
+    int l = strlen (text);
+	for (int i = 0; i < l; ++i) {
         while (!(IFG2 & UCA0TXIFG))
-            ; // Если буфер для отправки готов
-        UCA0TXBUF = text[i]; // Отправляем очередной символ из строки
+            ; // wait for snd bufs ready
+        UCA0TXBUF = text[i]; // send next symbol
     }
 }
