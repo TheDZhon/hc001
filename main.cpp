@@ -62,8 +62,7 @@ __interrupt void Timer0_A0(void) {
         // Clear timer
         TA0CTL = TACLR;
 
-        // Set sensor pin as output and put it LOW.
-        P2DIR |= BIT5;
+        // Set sensor LOW.
         P2OUT &= ~BIT5;
 
         // 20ms UP timer start (sensor handshake)
@@ -71,8 +70,14 @@ __interrupt void Timer0_A0(void) {
         TA0CTL = TASSEL_2 + MC_1;
     }
 
-    // After 20 ms handshake
     if (debounce_cnt == 60) {
+    	// Set sensor HIGH for 30us
+    	TA0CCR0 = 30;
+    	TA0CTL = TASSEL_2 + MC_1;
+    }
+
+    // After 20 ms + 30 us handshake
+    if (debounce_cnt == 61) {
         // Clear A0 timer, disable this interruption
         TA0CTL = TACLR;
         TA0CCTL0 &= ~CCIE;
@@ -101,6 +106,9 @@ __interrupt void Timer0_A1(void) {
 			P2IE &= ~BIT5;
 			TA0CTL = TACLR;
 
+	        P2DIR |= BIT5;
+	        P2OUT |= BIT5; // Set to high
+
 		    TA0CCR0 = 50000;
 		    TA0CCTL0 |= CCIE;
 		    TA0CTL = TASSEL_2 + MC_1;
@@ -123,6 +131,9 @@ __interrupt void Port_1 (void) {
 		// disable LEDs
 		P1OUT &= ~BIT0;
 		P1OUT &= ~BIT6;
+
+        P2DIR |= BIT5;
+        P2OUT |= BIT5; // Set to high
 
 		// Start timer for UP mode and allow interruption #0
 		// limited by 50000

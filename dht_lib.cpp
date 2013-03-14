@@ -11,7 +11,7 @@ uint16_t uword (uint8_t h, uint8_t l)
 {
 	uint16_t ret = h;
 	ret <<= 8;
-	ret |= l;
+	ret += l;
 	return ret;
 }
 
@@ -49,7 +49,7 @@ int DHT::decode ()
         }
     }
 
-    const unsigned short sum = data_[0] + data_[1] + data_[2] + data_[3];
+    const unsigned short sum = (data_[0] + data_[1] + data_[2] + data_[3]) & 0xFF;
 
 	return (sum == data_[4]) ? 0 : -1;
 }
@@ -59,5 +59,5 @@ void DHT::humidity (uint16_t * ipart, uint16_t * dpart) const {
 }
 
 void DHT::temperature (uint16_t * ipart, uint16_t * dpart) const {
-	decode_dht22 (uword (data_[2], data_[3]), ipart, dpart);
+	decode_dht22 (uword (data_[2] & 0x7F, data_[3]), ipart, dpart);
 }
