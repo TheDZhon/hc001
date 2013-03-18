@@ -1,10 +1,3 @@
-/*
- * dht_lib.cpp
- *
- *  Created on: 13.03.2013
- *      Author: dzhon
- */
-
 #include "dht_lib.h"
 
 uint16_t uword (uint8_t h, uint8_t l)
@@ -31,19 +24,15 @@ DHT::~DHT() {}
 
 int DHT::decode ()
 {
-	if (signal_indx_ != 42) { return signal_indx_; }
+	if (signal_indx_ != DHT_SIG_BUF_SZ) { return signal_indx_; }
 
 	signal_indx_ = 0;
 
-    for (unsigned j = 0; j < 5; ++j) {
-        //Очищаем байт данных от предыдущего значения
+    for (unsigned j = 0; j < DHT_DATA_BUF_SZ; ++j) {
         data_[j] = 0;
         for (unsigned i = 0; i < 8; ++i) {
             int k = i + 2 + j * 8;
-            //Если длительность между перепадами с 1 на 0
-            //больше 100 но меньше 120, то устанавливаем единичку
-            //в соответствующий бит байта данных
-            if (signal_[k] > 100 && signal_[k] < 120) {
+            if ((signal_[k] > DHT_ONE_MIN_DUR) && (signal_[k] < DHT_ONE_MAX_DUR)) {
                 data_[j] |= (1 << (7 - i));
             }
         }

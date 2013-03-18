@@ -1,14 +1,9 @@
-/*
- * dht_lib.h
- *
- *  Created on: 13.03.2013
- *      Author: dzhon
- */
-
 #ifndef DHT_LIB_H_
 #define DHT_LIB_H_
 
 #include <stdint.h>
+
+#include "definitions.h"
 
 class DHT {
 public:
@@ -22,8 +17,8 @@ public:
 	void humidity (uint16_t * ipart, uint16_t * dpart) const;
 	void temperature (uint16_t * ipart, uint16_t * dpart) const;
 private:
-	unsigned int signal_[42];
-	unsigned short data_[5];
+	unsigned int signal_[DHT_SIG_BUF_SZ];
+	unsigned short data_[DHT_DATA_BUF_SZ];
 
 	unsigned signal_indx_;
 };
