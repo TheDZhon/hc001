@@ -8,9 +8,7 @@
 #include "definitions.h"
 
 void wcycle_init ();
-
-int wcycle_send (char*);
-int wcycle_read (char*);
+void wcycle_send (const char * str);
 int wcycle_pwm_ctl (PWM_CTL_T);
 
 #endif /* WORK_CYCLE_H_ */

@@ -1,34 +1,34 @@
 #include "work_cycle.h"
 #include "definitions.h"
 
-#include "msp430g2553.h"
-
 #include  <string.h>
 #include  <stdint.h>
 #include  <stdio.h>
 
-#define PWM_STEP (PWM_PERIOD / 5)
+#define PWM_STEP (PWM_PERIOD / 10)
 
 void initClocks ();
 void initPins ();
-void initSPI ();
+void initDHT ();
+void initUART ();
+void initPWM ();
 
 void wcycle_init ()
 {
-	initClocks ();
 	initPins ();
+	initClocks ();
 	initUART ();
+	initPWM ();
+	initDHT ();
 }
 
-int wcycle_send (char * text) {
-    int l = strlen (text);
-    int i = 0;
-	for (i = 0; i < l; ++i) {
-        while (!(IFG2 & UCA0TXIFG))
-            ; // wait for snd bufs ready
-        UCA0TXBUF = text[i]; // send next symbol
-    }
-	return l;
+void wcycle_send (const char * str)
+{
+	while (*str) {
+		while (!(IFG2&UCA0TXIFG))
+			;              // USCI_A0 TX buffer ready?
+		UCA0TXBUF = *str++;
+	}
 }
 
 int wcycle_pwm_ctl (PWM_CTL_T t)
@@ -45,46 +45,51 @@ int wcycle_pwm_ctl (PWM_CTL_T t)
 }
 
 void initPins () {
-    P1DIR |= RED_LED;
-    P1OUT &= ~RED_LED;
-
-    P1DIR |= GREEN_LED;
-    P1OUT |= GREEN_LED;
+    P1DIR |= (RED_LED + GREEN_LED);
+    P1OUT &= ~(RED_LED + GREEN_LED);
 
     P2DIR |= PWM_FAN_DC;
     P2SEL |= PWM_FAN_DC;
 
-    TA1CCR0 = PWM_PERIOD;
-    TA1CCR1 = 0;
+    P2DIR |= SNSR;
+    P2OUT |= SNSR;
 
-    TA1CCTL1 = OUTMOD_7;
-    TA1CTL = TASSEL_1 + MC_1;
-
-    P1DIR &= ~BTN;
-    P1OUT |= BTN;
-    P1REN |= BTN;
-    P1IFG &= ~BTN;
-    P1IES |= BTN;
-    P1IE |= BTN;
+	P1SEL2 = BIT1 + BIT2;
+	P1SEL = BIT1 + BIT2;
 }
 
-void initSPI () {
-	P1SEL2 |= (BIT1 + BIT2 + BIT4);
-	P1SEL |= (BIT1 + BIT2 + BIT4);
+void initUART () {
+    UCA0CTL1 |= UCSWRST;
+    UCA0CTL1 = UCSSEL_2 + UCSWRST;
+    UCA0MCTL = UCBRF_0 + UCBRS_6;
+    UCA0BR0 = 130;
+    UCA0BR1 = 6;
+    UCA0CTL1 &= ~UCSWRST;
 
-	UCA0CTL1 |= UCSWRST;
-	UCA0CTL0 = UCMSB + UCMST + UCMODE_0 + UCSYNC;
-	UCA0CTL1 = UCSSEL_2 + UCSWRST;
-	UCA0BR0 = 200; //5kbit/s
-	UCA0CTL1 &= ~UCSWRST;
+    IFG2 &= ~UCA0RXIFG;
+    IE2 |= UCA0RXIE;
+}
+
+void initPWM () {
+    TA1CCR0 = PWM_PERIOD;
+    TA1CCR1 = 0;
+    TA1CCTL1 = OUTMOD_7;
+    TA1CTL = TASSEL_1 + MC_1;
+}
+
+void initDHT () {
+	TA0CCR0 = TIMER_DHT;
+	TA0CCTL0 |= CCIE;
+	TA0CTL = TASSEL_2 + MC_1;
 }
 
 void initClocks () {
     BCSCTL2 = SELM_0 + DIVM_0 + DIVS_0;
-    if (CALBC1_1MHZ != 0xFF) {
+    if (CALBC1_16MHZ != 0xFF) {
+        __delay_cycles(100000);
         DCOCTL = 0x00;
-        BCSCTL1 = CALBC1_1MHZ;
-        DCOCTL = CALDCO_1MHZ;
+        BCSCTL1 = CALBC1_16MHZ;     /* Set DCO to 16MHz */
+        DCOCTL = CALDCO_16MHZ;
     }
     BCSCTL1 |= XT2OFF + DIVA_0;
     BCSCTL3 = XT2S_0 + LFXT1S_2 + XCAP_1;
