@@ -11,8 +11,6 @@ DHT dht22;
 char sendbuf[STR_BUF_SZ];
 char readbuf;
 
-int debounce_counter = 0;
-
 bool has_new_rx_data_uart = false;
 bool has_new_dht_data = false;
 
@@ -42,7 +40,7 @@ void handle_dht22 () {
 		if (dht22_status == SUCCESS_STATUS) {
 			dht22.humidity(&hint, &hdec);
 			dht22.temperature(&tint, &tdec);
-			sprintf (sendbuf, "[DHT]:%d,%d% %d,%d\n", hint, hdec, tint, tdec);
+			sprintf (sendbuf, "[DHT] H:%d.%d%  T:%d.%d\n", hint, hdec, tint, tdec);
 			wcycle_send (sendbuf);
 		} else {
 			wcycle_send ("DHT error");
@@ -54,7 +52,13 @@ void handle_PWM () {
 	if (has_new_rx_data_uart) {
 		has_new_rx_data_uart = false;
 
+		if (readbuf == 'd') {
+			wcycle_dht_ctl (DHT_START);
+			return;
+		}
+
 		sprintf (sendbuf, "[FAN]:%d\n", readbuf);
+
 		wcycle_send (sendbuf);
 
 		wcycle_pwm_ctl (readbuf);

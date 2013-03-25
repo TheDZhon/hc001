@@ -4,14 +4,15 @@
 #include "msp430g2553.h" // MCU-specific header
 
 // Numeric constants
-#define DEBOUNCE_CNT      60
-#define TIMER_DHT         50000
 #define PWM_PERIOD        800
-#define STR_BUF_SZ        20
+#define STR_BUF_SZ        32
+
+#define DHT_TIMER_VAL     65535
+#define DHT_TIMER_CNT     5
 #define DHT_SIG_BUF_SZ    42
 #define DHT_DATA_BUF_SZ   5
-#define DHT_ONE_MIN_DUR   1600
-#define DHT_ONE_MAX_DUR   1920
+#define DHT_ZERO_MAX_DUR  1500
+#define DHT_ONE_MAX_DUR   2000
 
 #define SUCCESS_STATUS    0
 
@@ -26,6 +27,11 @@
 #define UART_RX           BIT1
 #define UART_TX           BIT2
 #define UART_TERM_SYMB    '\n'
+
+// DHT22 Control
+#define DHT_CTL_T         char
+#define DHT_STOP          (0x00)
+#define DHT_START         (0x01)
 
 // PWM Control
 #define PWM_CTL_T         char

@@ -9,7 +9,6 @@
 
 void initClocks ();
 void initPins ();
-void initDHT ();
 void initUART ();
 void initPWM ();
 
@@ -19,7 +18,6 @@ void wcycle_init ()
 	initClocks ();
 	initUART ();
 	initPWM ();
-	initDHT ();
 }
 
 void wcycle_send (const char * str)
@@ -29,6 +27,20 @@ void wcycle_send (const char * str)
 			;              // USCI_A0 TX buffer ready?
 		UCA0TXBUF = *str++;
 	}
+}
+
+int wcycle_dht_ctl (DHT_CTL_T t)
+{
+	TA0CTL = TACLR;
+
+	P2DIR |= SNSR;
+	P2OUT &= ~SNSR;
+
+    TA0CCR0 = DHT_TIMER_VAL;
+    TA0CCTL0 |= CCIE;
+    TA0CTL = TASSEL_2 + MC_1;
+
+    return 0;
 }
 
 int wcycle_pwm_ctl (PWM_CTL_T t)
@@ -51,11 +63,8 @@ void initPins () {
     P2DIR |= PWM_FAN_DC;
     P2SEL |= PWM_FAN_DC;
 
-    P2DIR |= SNSR;
-    P2OUT |= SNSR;
-
-	P1SEL2 = BIT1 + BIT2;
-	P1SEL = BIT1 + BIT2;
+	P1SEL2 |= (UART_RX + UART_TX);
+	P1SEL |= (UART_RX + UART_TX);
 }
 
 void initUART () {
@@ -75,12 +84,6 @@ void initPWM () {
     TA1CCR1 = 0;
     TA1CCTL1 = OUTMOD_7;
     TA1CTL = TASSEL_1 + MC_1;
-}
-
-void initDHT () {
-	TA0CCR0 = TIMER_DHT;
-	TA0CCTL0 |= CCIE;
-	TA0CTL = TASSEL_2 + MC_1;
 }
 
 void initClocks () {

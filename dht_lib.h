@@ -5,12 +5,16 @@
 
 #include "definitions.h"
 
+#include "work_cycle.h"
+
 class DHT {
 public:
 	DHT ();
 	~DHT ();
 
-	inline void handle_timer (uint16_t v) { signal_[signal_indx_++] = v; }
+	inline void handle_timer (uint16_t v) {
+		signal_[signal_indx_++] = v;
+	}
 
 	int decode ();
 
