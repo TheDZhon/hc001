@@ -17,7 +17,7 @@ bool has_new_dht_data = false;
 uint16_t hint, hdec, tint, tdec;
 
 void handle_dht22 ();
-void handle_PWM ();
+void handle_UART ();
 
 int main(void) {
 	WDTCTL = WDTPW + WDTHOLD;
@@ -28,7 +28,7 @@ int main(void) {
 
     while (true) {
         handle_dht22 ();
-        handle_PWM ();
+        handle_UART ();
 	}
 }
 
@@ -43,25 +43,21 @@ void handle_dht22 () {
 			sprintf (sendbuf, "[DHT] H:%d.%d%  T:%d.%d\n", hint, hdec, tint, tdec);
 			wcycle_send (sendbuf);
 		} else {
-			wcycle_send ("DHT error");
+			wcycle_send ("DHT I/O error\n");
 		}
 	}
 }
 
-void handle_PWM () {
+void handle_UART () {
 	if (has_new_rx_data_uart) {
+		char rb_copy = readbuf;
 		has_new_rx_data_uart = false;
 
-		if (readbuf == 'd') {
-			wcycle_dht_ctl (DHT_START);
-			return;
-		}
+		int dht_status = wcycle_dht_ctl (rb_copy);
+		int pwm_status = wcycle_pwm_ctl (rb_copy);
 
-		sprintf (sendbuf, "[FAN]:%d\n", readbuf);
-
+		sprintf (sendbuf, "D:%d P:%d\n", dht_status, pwm_status);
 		wcycle_send (sendbuf);
-
-		wcycle_pwm_ctl (readbuf);
 	}
 }
 

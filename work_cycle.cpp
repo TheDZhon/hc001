@@ -29,31 +29,56 @@ void wcycle_send (const char * str)
 	}
 }
 
-int wcycle_dht_ctl (DHT_CTL_T t)
+int wcycle_dht_ctl (char t)
 {
 	TA0CTL = TACLR;
 
 	P2DIR |= SNSR;
 	P2OUT &= ~SNSR;
 
-    TA0CCR0 = DHT_TIMER_VAL;
-    TA0CCTL0 |= CCIE;
-    TA0CTL = TASSEL_2 + MC_1;
-
-    return 0;
-}
-
-int wcycle_pwm_ctl (PWM_CTL_T t)
-{
 	switch (t) {
-		case PWM_STOP: TA1CCR1 = 0; break;
-		case PWM_START: TA1CCR1 = PWM_PERIOD; break;
-		case PWM_SPEED_UP: if ((TA1CCR1 + PWM_STEP) > PWM_PERIOD) { return -2; } TA1CCR1 += PWM_STEP; break;
-		case PWM_SPEED_DOWN: if (TA1CCR1 < PWM_STEP) { return -3; } TA1CCR1 -= PWM_STEP; break;
-		default: return -1;
+		case DHT_START: {
+		    TA0CCR0 = DHT_TIMER_VAL;
+		    TA0CCTL0 |= CCIE;
+		    TA0CTL = TASSEL_2 + MC_1;
+		    return 0;
+		}
+		case DHT_STOP: {
+			return 0;
+		}
 	}
 
-	return 0;
+    return -1;
+}
+
+int wcycle_pwm_ctl (char t)
+{
+	switch (t) {
+		case PWM_STOP: {
+			TA1CCR1 = 0;
+			return 0;
+		}
+		case PWM_START: {
+			TA1CCR1 = PWM_PERIOD;
+			return 0;
+		}
+		case PWM_SPEED_UP: {
+			if ((TA1CCR1 + PWM_STEP) > PWM_PERIOD) {
+				return -2;
+			}
+			TA1CCR1 += PWM_STEP;
+			return 0;
+		}
+		case PWM_SPEED_DOWN: {
+			if (TA1CCR1 < PWM_STEP) {
+				return -3;
+			}
+			TA1CCR1 -= PWM_STEP;
+			return 0;
+		}
+	}
+
+	return -1;
 }
 
 void initPins () {

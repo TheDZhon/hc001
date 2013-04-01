@@ -30,14 +30,14 @@
 
 // DHT22 Control
 #define DHT_CTL_T         char
-#define DHT_STOP          (0x00)
-#define DHT_START         (0x01)
+#define DHT_STOP          'H'
+#define DHT_START         'R'
 
 // PWM Control
 #define PWM_CTL_T         char
-#define PWM_STOP          (0x00)
-#define PWM_START         (0x01)
-#define PWM_SPEED_UP      (0x02)
-#define PWM_SPEED_DOWN    (0x03)
+#define PWM_STOP          'A'
+#define PWM_START         'D'
+#define PWM_SPEED_UP      'W'
+#define PWM_SPEED_DOWN    'S'
 
 #endif /* DEFINITIONS_H_ */
