@@ -79,16 +79,16 @@ int wcycle_dht_ctl (char t)
 		    TA0CCTL0 |= CCIE;
 		    TA0CTL = TASSEL_2 + MC_1;
 
-		    return 0;
+		    return CTL_SUCCESS;
 		}
 		case DHT_STOP: {
 			reset_dht ();
 
-			return 0;
+			return CTL_SUCCESS;
 		}
 	}
 
-    return -1;
+    return CTL_SKIP;
 }
 
 int wcycle_pwm_ctl (char t)
@@ -96,29 +96,29 @@ int wcycle_pwm_ctl (char t)
 	switch (t) {
 		case PWM_STOP: {
 			TA1CCR1 = 0;
-			return 0;
+			return CTL_SUCCESS;
 		}
 		case PWM_START: {
 			TA1CCR1 = PWM_PERIOD;
-			return 0;
+			return CTL_SUCCESS;
 		}
 		case PWM_SPEED_UP: {
 			if ((TA1CCR1 + PWM_STEP) > PWM_PERIOD) {
-				return -2;
+				return CTL_ERR;
 			}
 			TA1CCR1 += PWM_STEP;
-			return 0;
+			return CTL_SUCCESS;
 		}
 		case PWM_SPEED_DOWN: {
 			if (TA1CCR1 < PWM_STEP) {
-				return -3;
+				return CTL_ERR;
 			}
 			TA1CCR1 -= PWM_STEP;
-			return 0;
+			return CTL_SUCCESS;
 		}
 	}
 
-	return -1;
+	return CTL_SKIP;
 }
 
 void initPins () {

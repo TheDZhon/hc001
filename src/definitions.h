@@ -47,8 +47,8 @@
 
 // DHT statuses
 #define DHT_SUCCESS_STATUS   0
-#define DHT_LINK_ERROR       -2
 #define DHT_CRC_ERROR        -1
+#define DHT_LINK_ERROR       -2
 
 // Connections
 #define SNSR                 BIT5
@@ -61,6 +61,11 @@
 #define UART_RX              BIT1
 #define UART_TX              BIT2
 #define UART_TERM_SYMB       '\n'
+
+// CTL codes
+#define CTL_SUCCESS          0
+#define CTL_SKIP             -1
+#define CTL_ERR              -2
 
 // DHT22 Control
 #define DHT_STOP             'H'
