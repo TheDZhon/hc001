@@ -40,11 +40,11 @@ void handle_dht22 () {
 		if (dht22_status == SUCCESS_STATUS) {
 			dht22.humidity(&hint, &hdec);
 			dht22.temperature(&tint, &tdec);
-			sprintf (sendbuf, "[DHT] H:%d.%d%  T:%d.%d\n", hint, hdec, tint, tdec);
-			wcycle_send (sendbuf);
+			sprintf (sendbuf, "[DHT] H:%d.%d%  T:%d.%d\n\r", hint, hdec, tint, tdec);
 		} else {
-			wcycle_send ("DHT I/O error\n");
+			sprintf (sendbuf, "[DHT] I/O error:%d\n\r", dht22_status);
 		}
+		wcycle_send (sendbuf);
 	}
 }
 
@@ -55,9 +55,6 @@ void handle_UART () {
 
 		int dht_status = wcycle_dht_ctl (rb_copy);
 		int pwm_status = wcycle_pwm_ctl (rb_copy);
-
-		sprintf (sendbuf, "D:%d P:%d\n", dht_status, pwm_status);
-		wcycle_send (sendbuf);
 	}
 }
 

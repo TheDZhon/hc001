@@ -12,7 +12,7 @@
 #define DHT_SIG_BUF_SZ    42
 #define DHT_DATA_BUF_SZ   5
 #define DHT_ZERO_MAX_DUR  1500
-#define DHT_ONE_MAX_DUR   2000
+#define DHT_ONE_MAX_DUR   2200
 
 #define SUCCESS_STATUS    0
 
@@ -29,12 +29,10 @@
 #define UART_TERM_SYMB    '\n'
 
 // DHT22 Control
-#define DHT_CTL_T         char
 #define DHT_STOP          'H'
 #define DHT_START         'R'
 
 // PWM Control
-#define PWM_CTL_T         char
 #define PWM_STOP          'A'
 #define PWM_START         'D'
 #define PWM_SPEED_UP      'W'

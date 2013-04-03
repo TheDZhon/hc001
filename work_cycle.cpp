@@ -11,6 +11,7 @@ void initClocks ();
 void initPins ();
 void initUART ();
 void initPWM ();
+void initDHT ();
 
 void wcycle_init ()
 {
@@ -18,6 +19,7 @@ void wcycle_init ()
 	initClocks ();
 	initUART ();
 	initPWM ();
+	initDHT ();
 }
 
 void wcycle_send (const char * str)
@@ -29,21 +31,29 @@ void wcycle_send (const char * str)
 	}
 }
 
-int wcycle_dht_ctl (char t)
+void reset_dht ()
 {
 	TA0CTL = TACLR;
 
 	P2DIR |= SNSR;
 	P2OUT &= ~SNSR;
+}
 
+int wcycle_dht_ctl (char t)
+{
 	switch (t) {
 		case DHT_START: {
-		    TA0CCR0 = DHT_TIMER_VAL;
+			reset_dht ();
+
+			TA0CCR0 = DHT_TIMER_VAL;
 		    TA0CCTL0 |= CCIE;
 		    TA0CTL = TASSEL_2 + MC_1;
+
 		    return 0;
 		}
 		case DHT_STOP: {
+			reset_dht ();
+
 			return 0;
 		}
 	}
@@ -83,7 +93,8 @@ int wcycle_pwm_ctl (char t)
 
 void initPins () {
     P1DIR |= (RED_LED + GREEN_LED);
-    P1OUT &= ~(RED_LED + GREEN_LED);
+    P1OUT &= ~RED_LED;
+    P1OUT |= GREEN_LED;
 
     P2DIR |= PWM_FAN_DC;
     P2SEL |= PWM_FAN_DC;
@@ -109,6 +120,13 @@ void initPWM () {
     TA1CCR1 = 0;
     TA1CCTL1 = OUTMOD_7;
     TA1CTL = TASSEL_1 + MC_1;
+}
+
+void initDHT () {
+	TA0CTL = TACLR;
+
+	P2DIR |= SNSR;
+	P2OUT |= SNSR;
 }
 
 void initClocks () {
