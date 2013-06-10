@@ -60,7 +60,7 @@
 // UART
 #define UART_RX              BIT1
 #define UART_TX              BIT2
-#define UART_TERM_SYMB       '\n'
+#define UART_TERM_SYMB       '|'
 
 // CTL codes
 #define CTL_SUCCESS          0
