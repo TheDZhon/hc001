@@ -35,7 +35,7 @@
 #include  <stdint.h>
 #include  <stdio.h>
 
-#define PWM_STEP (PWM_PERIOD / 10)
+#define PWM_STEP (PWM_PERIOD / 100)
 
 void initClocks ();
 void initPins ();
@@ -65,60 +65,25 @@ void reset_dht ()
 {
 	TA0CTL = TACLR;
 
-	P2DIR |= SNSR;
-	P2OUT &= ~SNSR;
+	//P2DIR |= SNSR;
+	//P2OUT &= ~SNSR;
 }
 
-int wcycle_dht_ctl (char t)
+void wcycle_dht_read ()
 {
-	switch (t) {
-		case DHT_START: {
-			reset_dht ();
+	reset_dht ();
 
-			TA0CCR0 = DHT_TIMER_VAL;
-		    TA0CCTL0 |= CCIE;
-		    TA0CTL = TASSEL_2 + MC_1;
-
-		    return CTL_SUCCESS;
-		}
-		case DHT_STOP: {
-			reset_dht ();
-
-			return CTL_SUCCESS;
-		}
-	}
-
-    return CTL_SKIP;
+	TA0CCR0 = DHT_TIMER_VAL;
+	TA0CCTL0 |= CCIE;
+	TA0CTL = TASSEL_2 + MC_1;
 }
 
-int wcycle_pwm_ctl (char t)
+unsigned char wcycle_pwm_ctl (unsigned char t)
 {
-	switch (t) {
-		case PWM_STOP: {
-			TA1CCR1 = 0;
-			return CTL_SUCCESS;
-		}
-		case PWM_START: {
-			TA1CCR1 = PWM_PERIOD;
-			return CTL_SUCCESS;
-		}
-		case PWM_SPEED_UP: {
-			if ((TA1CCR1 + PWM_STEP) > PWM_PERIOD) {
-				return CTL_ERR;
-			}
-			TA1CCR1 += PWM_STEP;
-			return CTL_SUCCESS;
-		}
-		case PWM_SPEED_DOWN: {
-			if (TA1CCR1 < PWM_STEP) {
-				return CTL_ERR;
-			}
-			TA1CCR1 -= PWM_STEP;
-			return CTL_SUCCESS;
-		}
-	}
+	if (t > 100) { t = 100; }
 
-	return CTL_SKIP;
+	TA1CCR1 = unsigned (t) * PWM_STEP;
+	return t;
 }
 
 void initPins () {

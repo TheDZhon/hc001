@@ -44,10 +44,10 @@ void wcycle_send (const char * str);
 /**
  ** Try DHT control.
  **/
-int wcycle_dht_ctl (char);
+void wcycle_dht_read ();
 /**
  ** Try PWM control.
  **/
-int wcycle_pwm_ctl (char);
+unsigned char wcycle_pwm_ctl (unsigned char);
 
 #endif /* WORK_CYCLE_H_ */

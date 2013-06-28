@@ -11,3 +11,13 @@
 *.lai
 *.la
 *.a
+
+# Environment specific settings
+.*
+
+# Binary directories
+Debug
+
+# CCS ad-hoc
+*.cmd
+targetConfigs

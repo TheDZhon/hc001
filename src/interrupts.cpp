@@ -33,11 +33,12 @@
 
 extern DHT dht22;
 
-extern char sendbuf[STR_BUF_SZ];
-extern char readbuf;
+extern char sensorsdatabuf[STR_BUF_SZ];
+extern char speedbuf;
 
 extern bool has_new_rx_data_uart;
 extern bool has_new_dht_data;
+
 
 /**
  ** Timer0 A0 interruption for first stage of DHT22 hand-shake.
@@ -49,23 +50,29 @@ __interrupt void Timer0_A0_IH (void) {
 	if (interrupt_cnt < DHT_TIMER_CNT) {
 		++interrupt_cnt;
 
+		if (interrupt_cnt == DHT_TIMER_CNT)
+		{
+			P2DIR |= SNSR;
+			P2OUT &= ~SNSR;
+		}
+
 		return;
 	}
 
-    if (interrupt_cnt == DHT_TIMER_CNT) {
-    	interrupt_cnt = 0;
+	if (interrupt_cnt == DHT_TIMER_CNT) {
+		interrupt_cnt = 0;
 
-        TA0CTL = TACLR;
-        TA0CCTL0 &= ~CCIE;
+		TA0CTL = TACLR;
+		TA0CCTL0 &= ~CCIE;
 
-        P2DIR &= ~SNSR;
-        P2IFG &= ~SNSR;
-        P2IES |= SNSR;
-        P2IE |= SNSR;
+		P2DIR &= ~SNSR;
+		P2IFG &= ~SNSR;
+		P2IES |= SNSR;
+		P2IE |= SNSR;
 
-        TA0CCR0 = DHT_TIMER_VAL;
-        TA0CTL = TASSEL_2 + MC_2 + TAIE;
-    }
+		TA0CCR0 = DHT_TIMER_VAL;
+		TA0CTL = TASSEL_2 + MC_2 + TAIE;
+	}
 }
 
 /**
@@ -116,9 +123,9 @@ __interrupt void Port_2_IH (void) {
  **/
 #pragma vector=USCIAB0RX_VECTOR
 __interrupt void USCI0RX_ISR_HOOK (void) {
-	readbuf = UCA0RXBUF;
+	speedbuf = UCA0RXBUF;
 
-	if (readbuf != UART_TERM_SYMB) {
+	if (speedbuf != UART_TERM_SYMB) {
 		IFG2 &= ~UCA0RXIFG;
 
 		P1DIR |= BIT0;

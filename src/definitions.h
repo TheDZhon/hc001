@@ -38,8 +38,8 @@
 #define STR_BUF_SZ           32
 
 // DHT constants
-#define DHT_TIMER_VAL        65535
-#define DHT_TIMER_CNT        5
+#define DHT_TIMER_VAL        10000
+#define DHT_TIMER_CNT        5000
 #define DHT_SIG_BUF_SZ       42
 #define DHT_DATA_BUF_SZ      5
 #define DHT_ZERO_MAX_DUR     1500
@@ -61,20 +61,5 @@
 #define UART_RX              BIT1
 #define UART_TX              BIT2
 #define UART_TERM_SYMB       '|'
-
-// CTL codes
-#define CTL_SUCCESS          0
-#define CTL_SKIP             -1
-#define CTL_ERR              -2
-
-// DHT22 Control
-#define DHT_STOP             'H'
-#define DHT_START            'R'
-
-// PWM Control
-#define PWM_STOP             'A'
-#define PWM_START            'D'
-#define PWM_SPEED_UP         'W'
-#define PWM_SPEED_DOWN       'S'
 
 #endif /* DEFINITIONS_H_ */

@@ -36,11 +36,13 @@
 
 DHT dht22;
 
-char sendbuf[STR_BUF_SZ];
-char readbuf;
+char sensorsdatabuf[STR_BUF_SZ];
+volatile char speedbuf;
 
-bool has_new_rx_data_uart = false;
-bool has_new_dht_data = false;
+uint16_t last_succ_speed = 0;
+
+volatile bool has_new_rx_data_uart = false;
+volatile bool has_new_dht_data = false;
 
 uint16_t hint, hdec, tint, tdec;
 
@@ -56,6 +58,8 @@ int main(void) {
 
     __bis_SR_register (GIE);
 
+    wcycle_dht_read ();
+
     while (true) {
         handle_dht22 ();
         handle_UART ();
@@ -70,21 +74,21 @@ void handle_dht22 () {
 		if (dht22_status == DHT_SUCCESS_STATUS) {
 			dht22.humidity(&hint, &hdec);
 			dht22.temperature(&tint, &tdec);
-			sprintf (sendbuf, "[DHT] H:%d.%d%  T:%d.%d\n\r", hint, hdec, tint, tdec);
+			sprintf (sensorsdatabuf, "H:(%d.%d)T:(%d.%d)S:(%d)^|", hint, hdec, tint, tdec, last_succ_speed);
 		} else {
-			sprintf (sendbuf, "[DHT] I/O error:%d\n\r", dht22_status);
+			sprintf (sensorsdatabuf, "[DHT] I/O error:%d^|", dht22_status);
 		}
-		wcycle_send (sendbuf);
+
+		wcycle_send (sensorsdatabuf);
+		wcycle_dht_read ();
 	}
 }
 
 void handle_UART () {
 	if (has_new_rx_data_uart) {
-		char rb_copy = readbuf;
-		has_new_rx_data_uart = false;
+		last_succ_speed = wcycle_pwm_ctl (speedbuf);
 
-		int dht_status = wcycle_dht_ctl (rb_copy);
-		int pwm_status = wcycle_pwm_ctl (rb_copy);
+		has_new_rx_data_uart = false;
 	}
 }
 
