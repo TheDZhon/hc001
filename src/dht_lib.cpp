@@ -82,7 +82,7 @@ int DHT::decode ()
         data_[j] = 0;
         for (unsigned i = 0; i < 8; ++i) {
             int k = i + 2 + j * 8;
-            if ((signal_[k] > DHT_ZERO_MAX_DUR) && (signal_[k] < DHT_ONE_MAX_DUR)) {
+            if (signal_[k] > DHT_ZERO_MAX_DUR) {
                 data_[j] |= (1 << (7 - i));
             }
         }

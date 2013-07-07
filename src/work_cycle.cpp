@@ -61,21 +61,18 @@ void wcycle_send (const char * str)
 	}
 }
 
-void reset_dht ()
+void reset_timer ()
 {
 	TA0CTL = TACLR;
-
-	//P2DIR |= SNSR;
-	//P2OUT &= ~SNSR;
 }
 
 void wcycle_dht_read ()
 {
-	reset_dht ();
+	reset_timer ();
 
-	TA0CCR0 = DHT_TIMER_VAL;
-	TA0CCTL0 |= CCIE;
-	TA0CTL = TASSEL_2 + MC_1;
+	TA0CCR0 = DHT_TIMER_VAL;  // Set timer value
+	TA0CCTL0 |= CCIE;         // Allow int0
+	TA0CTL = TASSEL_2 + MC_1; // SMCLK and UP
 }
 
 unsigned char wcycle_pwm_ctl (unsigned char t)

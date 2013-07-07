@@ -38,12 +38,13 @@
 #define STR_BUF_SZ           32
 
 // DHT constants
-#define DHT_TIMER_VAL        10000
-#define DHT_TIMER_CNT        5000
-#define DHT_SIG_BUF_SZ       42
-#define DHT_DATA_BUF_SZ      5
-#define DHT_ZERO_MAX_DUR     1500
-#define DHT_ONE_MAX_DUR      2200
+#define DHT_TIMER_VAL         16000   // 1 ms
+#define DHT_TIMER_CNT_STANDBY 3000    // read pause (1ms x 3000 = 3s)
+#define DHT_TIMER_CNT_INIT    3025    // init pause (1ms x 25 = 25ms)
+
+#define DHT_SIG_BUF_SZ        42
+#define DHT_DATA_BUF_SZ       5
+#define DHT_ZERO_MAX_DUR      1503    // 98us
 
 // DHT statuses
 #define DHT_SUCCESS_STATUS   0

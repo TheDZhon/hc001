@@ -76,7 +76,7 @@ void handle_dht22 () {
 			dht22.temperature(&tint, &tdec);
 			sprintf (sensorsdatabuf, "H:(%d.%d)T:(%d.%d)S:(%d)^|", hint, hdec, tint, tdec, last_succ_speed);
 		} else {
-			sprintf (sensorsdatabuf, "[DHT] I/O error:%d^|", dht22_status);
+			sprintf (sensorsdatabuf, "[DHT22] I/O error:%d^|", dht22_status);
 		}
 
 		wcycle_send (sensorsdatabuf);

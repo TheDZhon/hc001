@@ -39,65 +39,59 @@ extern char speedbuf;
 extern bool has_new_rx_data_uart;
 extern bool has_new_dht_data;
 
+int interrupt_cnt_int0 = 0;
 
 /**
+ ** int0
  ** Timer0 A0 interruption for first stage of DHT22 hand-shake.
  **/
 #pragma vector=TIMER0_A0_VECTOR
 __interrupt void Timer0_A0_IH (void) {
-	static int interrupt_cnt = 0;
+	++interrupt_cnt_int0;
 
-	if (interrupt_cnt < DHT_TIMER_CNT) {
-		++interrupt_cnt;
+	if (interrupt_cnt_int0 == DHT_TIMER_CNT_STANDBY)
+	{
+		TA0CTL = TACLR;           // Clear timer counter
 
-		if (interrupt_cnt == DHT_TIMER_CNT)
-		{
-			P2DIR |= SNSR;
-			P2OUT &= ~SNSR;
-		}
+		P2DIR |= SNSR;            // DHT contact pin as OUT
+		P2OUT &= ~SNSR;           // DHT contact pin LOW
 
-		return;
+		TA0CCR0 = DHT_TIMER_VAL;  // Restart timer counter
+		TA0CTL = TASSEL_2 + MC_1; // SMCLK, UP
 	}
 
-	if (interrupt_cnt == DHT_TIMER_CNT) {
-		interrupt_cnt = 0;
+	if (interrupt_cnt_int0 == DHT_TIMER_CNT_INIT) {
+		interrupt_cnt_int0 = 0;   // Reset interrupts counter
 
-		TA0CTL = TACLR;
-		TA0CCTL0 &= ~CCIE;
+		TA0CTL = TACLR;           // Clear timer
+		TA0CCTL0 &= ~CCIE;        // Prevent int0
 
-		P2DIR &= ~SNSR;
-		P2IFG &= ~SNSR;
-		P2IES |= SNSR;
-		P2IE |= SNSR;
+		P2DIR &= ~SNSR;           // DHT contact pin as IN
+		P2IFG &= ~SNSR;           // DHT contact pin clear interrupts
+		P2IES |= SNSR;            // DHT contact pin enable interrupts HIGH->LOW
+		P2IE |= SNSR;             // DHT contact pin enable interrupts
 
-		TA0CCR0 = DHT_TIMER_VAL;
-		TA0CTL = TASSEL_2 + MC_2 + TAIE;
+		TA0CTL = TASSEL_2
+				+ MC_2 + TAIE;    // Enable int1
 	}
 }
 
 /**
+ ** int1
  ** Timer A1 interruption for second stage of DHT22 hand-shake.
  **/
 #pragma vector=TIMER0_A1_VECTOR
 __interrupt void Timer0_A1_IH (void) {
-	static int interrupt_cnt = 0;
-
-	if (interrupt_cnt < DHT_TIMER_CNT) {
-		++interrupt_cnt;
-		return;
-	}
-
-	interrupt_cnt = 0;
-
     switch (TA0IV) {
 		case TA0IV_TAIFG:
-			P2IE &= ~SNSR;
-			TA0CTL = TACLR;
+			P2IE &= ~SNSR;    // DHT contact pin disable interrupts
+			TA0CTL = TACLR;   // Clear timer
 
-		    has_new_dht_data = true;
+			has_new_dht_data = true;
 
 			//__bic_SR_register_on_exit (LPM0);
-			break;
+
+		    break;
 		default:
 			break;
     }
@@ -108,12 +102,12 @@ __interrupt void Timer0_A1_IH (void) {
  **/
 #pragma vector=PORT2_VECTOR
 __interrupt void Port_2_IH (void) {
-    P2IFG &= ~SNSR;
+    P2IFG &= ~SNSR;                   // Clear interrupt flag
 
-    dht22.handle_timer(TA0R);
+    dht22.handle_timer(TA0R);         // Analyze current data bit
 
-    TA0CTL = TACLR;
-    TA0CTL = TASSEL_2 + MC_2 + TAIE;
+    TA0CTL = TACLR;                   // Clear timer
+    TA0CTL = TASSEL_2 + MC_2 + TAIE;  // Restart timer
 
     P1OUT ^= RED_LED;
 }
