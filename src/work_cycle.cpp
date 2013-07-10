@@ -37,19 +37,28 @@
 
 #define PWM_STEP (PWM_PERIOD / 100)
 
+extern uint16_t last_succ_speed;
+
 void initClocks ();
+void initFlash ();
 void initPins ();
 void initUART ();
 void initPWM ();
 void initDHT ();
 
+char readFlash ();
+void writeFlash (char val);
+
 void wcycle_init ()
 {
 	initPins ();
 	initClocks ();
+	initFlash ();
 	initUART ();
 	initPWM ();
 	initDHT ();
+
+	wcycle_pwm_ctl (readFlash());
 }
 
 void wcycle_send (const char * str)
@@ -75,18 +84,21 @@ void wcycle_dht_read ()
 	TA0CTL = TASSEL_2 + MC_1; // SMCLK and UP
 }
 
-unsigned char wcycle_pwm_ctl (unsigned char t)
+void wcycle_pwm_ctl (unsigned char t)
 {
 	if (t > 100) { t = 100; }
 
+	if (t == TA1CCR1) { return; }
+
+	writeFlash (t);
 	TA1CCR1 = unsigned (t) * PWM_STEP;
-	return t;
+
+	last_succ_speed = t;
 }
 
 void initPins () {
     P1DIR |= (RED_LED + GREEN_LED);
-    P1OUT &= ~RED_LED;
-    P1OUT |= GREEN_LED;
+    P1OUT &= ~(RED_LED + GREEN_LED);
 
     P2DIR |= PWM_FAN_DC;
     P2SEL |= PWM_FAN_DC;
@@ -131,4 +143,33 @@ void initClocks () {
     }
     BCSCTL1 |= XT2OFF + DIVA_0;
     BCSCTL3 = XT2S_0 + LFXT1S_2 + XCAP_1;
+}
+
+void initFlash () {
+	FCTL2 = FWKEY + FSSEL0 + (FN0 + FN1 + FN2 + FN3 + FN5);             // MCLK/48 for Flash Timing Generator
+}
+
+char readFlash () {
+	const char * flash_ptr = (const char*)FLASH_OFFSET;
+	return *flash_ptr;
+}
+
+void writeFlash (char v) {
+	_DINT();
+
+	FCTL1 = FWKEY + ERASE; // ALLOW RESET
+	FCTL3 = FWKEY; // CLEAR LOCK
+
+	char * flash_ptr = (char*)FLASH_OFFSET;
+
+	*flash_ptr = 0; // RESET
+
+	FCTL1 = FWKEY + WRT; // SET WRITE
+
+	*flash_ptr = v;
+
+	FCTL1 = FWKEY; // CLAR WRITE
+	FCTL3 = FWKEY + LOCK; // SET LOCK
+
+	_EINT();
 }

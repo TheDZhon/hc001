@@ -39,7 +39,7 @@ DHT dht22;
 char sensorsdatabuf[STR_BUF_SZ];
 volatile char speedbuf;
 
-uint16_t last_succ_speed = 0;
+volatile uint16_t last_succ_speed = 0;
 
 volatile bool has_new_rx_data_uart = false;
 volatile bool has_new_dht_data = false;
@@ -86,9 +86,11 @@ void handle_dht22 () {
 
 void handle_UART () {
 	if (has_new_rx_data_uart) {
-		last_succ_speed = wcycle_pwm_ctl (speedbuf);
+		wcycle_pwm_ctl (speedbuf - SPEED_ADDITION);
 
 		has_new_rx_data_uart = false;
+
+		P1OUT ^= GREEN_LED;
 	}
 }
 

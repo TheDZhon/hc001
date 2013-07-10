@@ -48,6 +48,6 @@ void wcycle_dht_read ();
 /**
  ** Try PWM control.
  **/
-unsigned char wcycle_pwm_ctl (unsigned char);
+void wcycle_pwm_ctl (unsigned char);
 
 #endif /* WORK_CYCLE_H_ */

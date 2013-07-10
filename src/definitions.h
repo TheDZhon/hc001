@@ -36,6 +36,10 @@
 // Numeric constants
 #define PWM_PERIOD           800
 #define STR_BUF_SZ           32
+#define SPEED_ADDITION       1
+
+// Flash memory
+#define FLASH_OFFSET         0x1040
 
 // DHT constants
 #define DHT_TIMER_VAL         16000   // 1 ms

@@ -102,14 +102,16 @@ __interrupt void Timer0_A1_IH (void) {
  **/
 #pragma vector=PORT2_VECTOR
 __interrupt void Port_2_IH (void) {
-    P2IFG &= ~SNSR;                   // Clear interrupt flag
+	if (P2IFG & SNSR) {
+    	dht22.handle_timer(TA0R);         // Analyze current data bit
 
-    dht22.handle_timer(TA0R);         // Analyze current data bit
+    	TA0CTL = TACLR;                   // Clear timer
+    	TA0CTL = TASSEL_2 + MC_2 + TAIE;  // Restart timer
 
-    TA0CTL = TACLR;                   // Clear timer
-    TA0CTL = TASSEL_2 + MC_2 + TAIE;  // Restart timer
+    	P1OUT ^= RED_LED;
+	}
 
-    P1OUT ^= RED_LED;
+	P2IFG = 0; // Reset flag
 }
 
 /**
@@ -120,11 +122,9 @@ __interrupt void USCI0RX_ISR_HOOK (void) {
 	speedbuf = UCA0RXBUF;
 
 	if (speedbuf != UART_TERM_SYMB) {
+		P1OUT ^= GREEN_LED;
+
 		IFG2 &= ~UCA0RXIFG;
-
-		P1DIR |= BIT0;
-		P1OUT ^= BIT0;
-
 		has_new_rx_data_uart = true;
 	}
 }
